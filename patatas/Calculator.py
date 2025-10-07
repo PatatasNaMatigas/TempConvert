@@ -200,8 +200,9 @@ class MainWindow:
                 return True
             if newValue == "-":
                 return True
-            if newValue.lstrip("-").isdigit():
-                return True
+            if newValue.lstrip("-").replace(".", "", 1).isdigit():
+                if newValue.count(".") <= 1:
+                    return True
             return False
 
         checkValidInputs = (self.window.register(checkInput), "%P")
@@ -237,16 +238,18 @@ class MainWindow:
             temp = values[0]
             frm = values[1]
             to = values[2]
-            result = round(self.calculator.calculate(values), 2)
+            tempInC = round(self.calculator.calculate((temp, frm, self.calculator.CELSIUS)), 2)
             bg = self.calculator.getColorTemp(temp, frm)
             resultWindow = ResultWindow(
-                temp = temp,
-                result = result,
+                temp = round(temp, 2),   # round original input
+                result = round(self.calculator.calculate(values), 2),
                 unitFrom = self.calculator.unitToChar(frm),
                 unitTo = self.calculator.unitToChar(to),
                 color = bg[0],
-                vfx = bg[1]
+                vfx = bg[1],
+                tempInC = tempInC        # <-- add this extra argument for clarity
             )
+
             resultWindow.start()
 
         done = tk.Button(
@@ -279,20 +282,19 @@ class MainWindow:
 
     def getValues(self):
         return (
-            int(self.tempInput.get()),
+            float(self.tempInput.get()),
             self.unitFromPtr.contents.value,
             self.unitToPtr.contents.value
         )
 
 class ResultWindow:
 
-    def __init__(self, temp = 0, result = 0, unitFrom = "°C", unitTo = "°C", color = "", vfx = False):
-        self.imageItem = None
-        self.canvas = None
+    def __init__(self, temp=0, result=0, unitFrom="°C", unitTo="°C", color="", vfx=False, tempInC=0):
         self.temp = temp
+        self.tempInC = tempInC
+        self.result = result
         self.unitFrom = unitFrom
         self.unitTo = unitTo
-        self.result = result
         self.vfx = vfx
         print(temp, unitFrom, unitTo, result, color, vfx)
         window = tk.Toplevel()
@@ -322,7 +324,7 @@ class ResultWindow:
 
         self.canvas = canvas
 
-        if self.vfx and self.temp >= 50:
+        if self.vfx and self.tempInC >= 50:
 
             self.frames = [tk.PhotoImage(
                 file = "res/assets/fire.gif",
@@ -337,7 +339,7 @@ class ResultWindow:
                 image = self.frames[0]
             )
             animate()
-        elif self.vfx and self.temp < 50:
+        elif self.vfx and self.tempInC < 50:
             self.frames = [tk.PhotoImage(
                 file = "res/assets/snow.gif",
                 format = f"gif - {i}") for i in range(8)
